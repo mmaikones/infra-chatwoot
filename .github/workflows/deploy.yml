@@ -26,7 +26,6 @@ jobs:
           script: |
             set -euo pipefail # Fail fast
 
-            # Definimos SSH_USER aqui para que esteja disponível no script remoto
             SSH_USER=${{ secrets.SSH_USER }}
             APP_DIR=${{ secrets.APP_DIR }} # /srv/chatwoot ou o que você definiu
 
@@ -35,7 +34,6 @@ jobs:
                 echo "Repositório não encontrado em $APP_DIR. Limpando e clonando..."
                 sudo rm -rf "$APP_DIR" || true
                 sudo mkdir -p "$APP_DIR"
-                # Agora SSH_USER estará disponível aqui
                 sudo chown -R ${SSH_USER}:${SSH_USER} "$APP_DIR"
                 git clone https://github.com/${{ github.repository }} "$APP_DIR"
             fi
@@ -48,7 +46,9 @@ jobs:
             git reset --hard origin/main
             
             echo "Garantindo permissões para scripts..."
-            chmod +x scripts/*.sh
+            chmod +x scripts/*.sh # <--- Esta linha já dá permissão a TODOS os .sh na pasta scripts
+            # No entanto, para ser super explícito, podemos garantir para o migrate.sh também
+            # chmod +x scripts/migrate.sh # <--- Adicionado para redundância e clareza, mas o anterior já deve cobrir.
 
             echo "Executando script de atualização da stack Docker Compose..."
             ./scripts/update_stack.sh
@@ -57,3 +57,5 @@ jobs:
             ./scripts/migrate.sh
 
             echo "Deploy concluído com sucesso!"
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
