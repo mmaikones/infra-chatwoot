@@ -26,6 +26,8 @@ jobs:
           script: |
             set -euo pipefail # Fail fast
 
+            # Definimos SSH_USER aqui para que esteja disponível no script remoto
+            SSH_USER=${{ secrets.SSH_USER }}
             APP_DIR=${{ secrets.APP_DIR }} # /srv/chatwoot ou o que você definiu
 
             echo "Verificando e preparando o diretório de deploy na VPS: $APP_DIR"
@@ -33,7 +35,7 @@ jobs:
                 echo "Repositório não encontrado em $APP_DIR. Limpando e clonando..."
                 sudo rm -rf "$APP_DIR" || true
                 sudo mkdir -p "$APP_DIR"
-                # Usando SSH_USER que é passado via 'env' abaixo
+                # Agora SSH_USER estará disponível aqui
                 sudo chown -R ${SSH_USER}:${SSH_USER} "$APP_DIR"
                 git clone https://github.com/${{ github.repository }} "$APP_DIR"
             fi
@@ -55,5 +57,3 @@ jobs:
             ./scripts/migrate.sh
 
             echo "Deploy concluído com sucesso!"
-        env: # <--- Adicionei este bloco 'env' aqui
-          SSH_USER: ${{ secrets.SSH_USER }} # Passa o usuário SSH como variável de ambiente para o script
