@@ -9,7 +9,6 @@ services:
         echo 'Rails.application.config.active_storage.variant_processor = :mini_magick' > /app/config/initializers/active_storage.rb;
         if [ \"$${AGENT_ONLY_MINE}\" = \"true\" ]; then
           # Monta o arquivo agent_only_mine.rb do host e o injeta no local de initializers do Rails
-          # Isso evita problemas de parsing de variáveis de ambiente com conteúdo multi-linha no .env
           printf '%%s' \"$$(cat /app/initializers/agent_only_mine.rb)\" > /app/config/initializers/agent_only_mine.rb;
         fi;
         bundle exec rails s -p 3000 -b 0.0.0.0
@@ -75,11 +74,12 @@ services:
           memory: 1024M
 
   redis:
-    image: redis:latest # Alterado para usar o seu image name preferido
+    image: redis:latest
     restart: unless-stopped
+    env_file: .env # <--- ADICIONADO AQUI!
     command: ["redis-server","--appendonly","yes","--port","6379"]
     volumes:
-      - chatwoot_redis:/data # Usando o volume nomeado 'chatwoot_redis'
+      - chatwoot_redis:/data
     networks:
       - abrangenetnet
     deploy:
@@ -92,14 +92,16 @@ services:
           memory: 2048M
 
   postgres:
-    image: pgvector/pgvector:pg16 # Usando a sua imagem pgvector
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
-    environment:
+    env_file: .env # <--- ADICIONADO AQUI!
+    environment: # Esta seção 'environment' serve para sobrescrever ou adicionar variáveis específicas.
+                 # As variáveis do .env ainda são carregadas primeiro.
       POSTGRES_DB: ${POSTGRES_DATABASE}
       POSTGRES_USER: ${POSTGRES_USERNAME}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - pg_data:/var/lib/postgresql/data # Usando um volume nomeado para dados do Postgres
+      - pg_data:/var/lib/postgresql/data
     networks:
       - abrangenetnet
     deploy:
@@ -109,7 +111,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: 2048M # Ajustado para 2GB, valor comum para DB
+          memory: 2048M
 
 volumes:
   chatwoot_storage:
@@ -121,9 +123,9 @@ volumes:
   chatwoot_redis:
     external: true
     name: chatwoot_redis
-  pg_data: # Novo volume para o Postgres
+  pg_data:
     external: true
-    name: pg_data # Crie este volume manualmente na VPS: docker volume create pg_data
+    name: pg_data
 
 networks:
   abrangenetnet:
