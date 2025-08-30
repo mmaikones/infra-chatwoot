@@ -8,7 +8,9 @@ services:
       sh -c "
         echo 'Rails.application.config.active_storage.variant_processor = :mini_magick' > /app/config/initializers/active_storage.rb;
         if [ \"${AGENT_ONLY_MINE}\" = \"true\" ]; then
-          printf \"%s\" \"$AGENT_ONLY_MINE_INIT\" > /app/config/initializers/agent_only_mine.rb;
+          # Monta o arquivo agent_only_mine.rb do host e o injeta no local de initializers do Rails
+          # Isso evita problemas de parsing de variáveis de ambiente com conteúdo multi-linha no .env
+          printf '%s' \"$(cat /app/initializers/agent_only_mine.rb)\" > /app/config/initializers/agent_only_mine.rb;
         fi;
         bundle exec rails s -p 3000 -b 0.0.0.0
       "
@@ -18,6 +20,7 @@ services:
     volumes:
       - chatwoot_storage:/app/storage
       - chatwoot_public:/app/public
+      - ./app/initializers/agent_only_mine.rb:/app/initializers/agent_only_mine.rb:ro # Monta o arquivo do repositório para o container
     networks:
       - abrangenetnet
     deploy:
