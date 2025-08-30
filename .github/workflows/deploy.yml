@@ -46,9 +46,9 @@ jobs:
             git reset --hard origin/main
             
             echo "Garantindo permissões para scripts..."
-            chmod +x scripts/*.sh # <--- Esta linha já dá permissão a TODOS os .sh na pasta scripts
-            # No entanto, para ser super explícito, podemos garantir para o migrate.sh também
-            # chmod +x scripts/migrate.sh # <--- Adicionado para redundância e clareza, mas o anterior já deve cobrir.
+            # Definir permissão de execução individualmente para garantir
+            chmod +x scripts/update_stack.sh
+            chmod +x scripts/migrate.sh
 
             echo "Executando script de atualização da stack Docker Compose..."
             ./scripts/update_stack.sh
