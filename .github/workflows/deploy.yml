@@ -29,16 +29,12 @@ jobs:
             APP_DIR=${{ secrets.APP_DIR }} # /srv/chatwoot ou o que você definiu
 
             echo "Verificando e preparando o diretório de deploy na VPS: $APP_DIR"
-            # Se o diretório da aplicação não existe, cria e clona.
-            # Se já existe (e não é o clone do nosso repo), pode ser outra instalação.
-            # Para o primeiro deploy deste workflow, vamos garantir que ele está vazio ou será criado.
             if [ ! -d "$APP_DIR/.git" ]; then
                 echo "Repositório não encontrado em $APP_DIR. Limpando e clonando..."
-                # Remove o diretório APP_DIR completamente se não for um repositório git válido
-                # (para evitar conflitos com instalações manuais anteriores)
                 sudo rm -rf "$APP_DIR" || true
                 sudo mkdir -p "$APP_DIR"
-                sudo chown -R ${SSH_USER}:${SSH_USER} "$APP_DIR" # Garante que o usuário SSH tenha permissão
+                # Usando SSH_USER que é passado via 'env' abaixo
+                sudo chown -R ${SSH_USER}:${SSH_USER} "$APP_DIR"
                 git clone https://github.com/${{ github.repository }} "$APP_DIR"
             fi
             
@@ -59,5 +55,5 @@ jobs:
             ./scripts/migrate.sh
 
             echo "Deploy concluído com sucesso!"
-        env:
-          SSH_USER: ${{ secrets.SSH_USER }} # Passa o usuário SSH como variável de ambiente para o chown
+        env: # <--- Adicionei este bloco 'env' aqui
+          SSH_USER: ${{ secrets.SSH_USER }} # Passa o usuário SSH como variável de ambiente para o script
