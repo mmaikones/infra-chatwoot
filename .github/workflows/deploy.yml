@@ -8,27 +8,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest # O runner do GitHub Actions que executará as etapas
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4 # Clona o seu repositório Git
+      - name: Checkout repository (on GitHub Actions runner)
+        uses: actions/checkout@v4 # Clona o seu repositório Git no runner do GitHub Actions
 
       - name: Configure SSH private key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_KEY }} # Usa a chave SSH privada que você configurará nos Secrets
 
-      - name: Ensure APP_DIR exists and clone if first deploy
-        run: |
-          set -e
-          APP_DIR=${{ secrets.APP_DIR }}
-          if [ ! -d "$APP_DIR" ]; then
-            echo "Diretório da aplicação ($APP_DIR) não existe. Criando e clonando repositório..."
-            sudo mkdir -p "$APP_DIR" # Use sudo para criar em /srv
-            sudo chown ${SSH_USER}:${SSH_USER} "$APP_DIR" # Garante que o usuário SSH tenha permissão
-            git clone https://github.com/${{ github.repository }} "$APP_DIR"
-          fi
-        env:
-          SSH_USER: ${{ secrets.SSH_USER }}
-        
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -38,7 +25,22 @@ jobs:
           script_stop: true # Para o script se algum comando falhar
           script: |
             set -euo pipefail # Fail fast
-            APP_DIR=${{ secrets.APP_DIR }}
+
+            APP_DIR=${{ secrets.APP_DIR }} # /srv/chatwoot ou o que você definiu
+
+            echo "Verificando e preparando o diretório de deploy na VPS: $APP_DIR"
+            # Se o diretório da aplicação não existe, cria e clona.
+            # Se já existe (e não é o clone do nosso repo), pode ser outra instalação.
+            # Para o primeiro deploy deste workflow, vamos garantir que ele está vazio ou será criado.
+            if [ ! -d "$APP_DIR/.git" ]; then
+                echo "Repositório não encontrado em $APP_DIR. Limpando e clonando..."
+                # Remove o diretório APP_DIR completamente se não for um repositório git válido
+                # (para evitar conflitos com instalações manuais anteriores)
+                sudo rm -rf "$APP_DIR" || true
+                sudo mkdir -p "$APP_DIR"
+                sudo chown -R ${SSH_USER}:${SSH_USER} "$APP_DIR" # Garante que o usuário SSH tenha permissão
+                git clone https://github.com/${{ github.repository }} "$APP_DIR"
+            fi
             
             echo "Entrando no diretório da aplicação: $APP_DIR"
             cd "$APP_DIR"
@@ -57,3 +59,5 @@ jobs:
             ./scripts/migrate.sh
 
             echo "Deploy concluído com sucesso!"
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }} # Passa o usuário SSH como variável de ambiente para o chown
